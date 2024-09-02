@@ -98,19 +98,13 @@ def stop_logging() -> Response:
 # Video streaming function using GStreamer
 def gen_frames() -> bytes:
     print("Attempting to open the camera...")
-    try:
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            print("Failed to open camera. It might be in use or not available.")
-            yield (b'--frame\r\n'
-                   b'Content-Type: text/plain\r\n\r\n'
-                   b'Camera is not available.\r\n')
-            return
-    except Exception as e:
-        print(f"Error while opening camera: {e}")
+
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Failed to open camera. It might be in use or not available.")
         yield (b'--frame\r\n'
                b'Content-Type: text/plain\r\n\r\n'
-               b'Error while opening camera.\r\n')
+               b'Camera is not available.\r\n')
         return
 
     print("Camera opened successfully.")
