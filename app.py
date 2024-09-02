@@ -139,7 +139,7 @@ def get_latest_data():
 
     rounded_data = []
     for row in data_without_headers:
-        rounded_row = [row[0]] + [f"{float(x):.2f}" for x in row[1:]]
+        rounded_row = [row[0]] + [f"{float(x):.2f}" for x in row[1:-1]]
         rounded_data.append(rounded_row)
 
     return jsonify(rounded_data[-10:])

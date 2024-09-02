@@ -56,9 +56,17 @@
     <div class="container">
         <div>
             <h2>Recorded Data</h2>
-            <table>
-                <thead id="table-headers">
-                    <!-- Table headers will be inserted here dynamically -->
+            <table id="data-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Thermistor 1</th>
+                        <th>Thermistor 2</th>
+                        <th>Thermistor 3</th>
+                        <th>Thermistor 4</th>
+                        <th>Thermocouple</th>
+                        <th>Comment</th>
+                    </tr>
                 </thead>
                 <tbody id="data-table-body">
                     <!-- Real-time data will be inserted here dynamically -->
@@ -72,6 +80,21 @@
         </div>
     </div>
 
+    <div class="comment-container">
+        <h3>Add Comment to a Data Point</h3>
+        <form method="POST" action="/add_comment">
+            <label for="timestamp">Select Timestamp:</label>
+            <select id="timestamp" name="timestamp" required>
+                <!-- Timestamps will be inserted here dynamically -->
+            </select>
+
+            <label for="comment">Comment:</label>
+            <input type="text" id="comment" name="comment" required>
+
+            <button type="submit">Add Comment</button>
+        </form>
+    </div>
+
     <div>
         <h3>After you stop logging, your files will be available for 10 minutes:</h3>
         <p>Download them before they are deleted:</p>
@@ -80,73 +103,37 @@
     </div>
 
     <script>
-        let headersInserted = false;
+        function fetchData() {
+            fetch('/get_latest_data')
+                .then(response => response.json())
+                .then(data => {
+                    let tableBody = document.getElementById("data-table-body");
+                    let timestampSelect = document.getElementById("timestamp");
 
-        function insertHeaders() {
-            const headers = ['Timestamp', 'Thermistor 1', 'Thermistor 2', 'Thermistor 3', 'Thermistor 4', 'Thermocouple', 'Comment'];
-            let tableHeaders = document.getElementById("table-headers");
+                    tableBody.innerHTML = "";  // Clear existing rows
+                    timestampSelect.innerHTML = "";  // Clear existing options
 
-            let tr = document.createElement("tr");
-            headers.forEach(header => {
-                let th = document.createElement("th");
-                th.innerText = header;
-                tr.appendChild(th);
-            });
-            tableHeaders.appendChild(tr);
-            headersInserted = true;
+                    data.forEach(row => {
+                        let tr = document.createElement("tr");
+                        row.forEach((cell, index) => {
+                            let td = document.createElement("td");
+                            td.innerText = cell;
+                            tr.appendChild(td);
+                        });
+
+                        // Add the row to the table body
+                        tableBody.appendChild(tr);
+
+                        // Add the timestamp to the dropdown
+                        let option = document.createElement("option");
+                        option.value = row[0];  // Assuming timestamp is the first column
+                        option.innerText = row[0];
+                        timestampSelect.appendChild(option);
+                    });
+                });
         }
 
-        function fetchData() {
-        fetch('/get_latest_data')
-            .then(response => response.json())
-            .then(data => {
-                let tableBody = document.getElementById("data-table-body");
-                tableBody.innerHTML = "";  // Clear existing rows
-
-                if (!headersInserted && data.length > 0) {
-                    insertHeaders();
-                }
-
-                data.forEach(row => {
-                    let tr = document.createElement("tr");
-                    row.forEach((cell, index) => {
-                        let td = document.createElement("td");
-                        td.innerText = cell;
-                        tr.appendChild(td);
-                    });
-
-                    // Add comment input field
-                    let commentTd = document.createElement("td");
-                    let commentForm = document.createElement("form");
-                    commentForm.method = "POST";
-                    commentForm.action = "/add_comment";
-
-                    let timestampInput = document.createElement("input");
-                    timestampInput.type = "hidden";
-                    timestampInput.name = "timestamp";
-                    timestampInput.value = row[0];  // Assuming timestamp is the first column
-
-                    let commentInput = document.createElement("input");
-                    commentInput.type = "text";
-                    commentInput.name = "comment";
-
-                    let commentSubmit = document.createElement("button");
-                    commentSubmit.type = "submit";
-                    commentSubmit.innerText = "Add Comment";
-
-                    commentForm.appendChild(timestampInput);
-                    commentForm.appendChild(commentInput);
-                    commentForm.appendChild(commentSubmit);
-
-                    commentTd.appendChild(commentForm);
-                    tr.appendChild(commentTd);
-
-                    tableBody.appendChild(tr);
-                });
-            });
-    }
-
-    setInterval(fetchData, 1000);  // Fetch new data every second
-</script>
+        setInterval(fetchData, 1000);  // Fetch new data every second
+    </script>
 </body>
 </html>
