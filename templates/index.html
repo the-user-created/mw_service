@@ -80,75 +80,90 @@
     </div>
 
     <script>
-        let headersInserted = false;
-        let comments = {};
+    let headersInserted = false;
+    let comments = {};
 
-        function insertHeaders() {
-            const headers = ['Timestamp', 'Thermistor 1', 'Thermistor 2', 'Thermistor 3', 'Thermistor 4', 'Thermocouple', 'Comment'];
-            let tableHeaders = document.getElementById("table-headers");
+    function insertHeaders() {
+        const headers = ['Timestamp', 'Thermistor 1', 'Thermistor 2', 'Thermistor 3', 'Thermistor 4', 'Thermocouple', 'Comment'];
+        let tableHeaders = document.getElementById("table-headers");
 
-            let tr = document.createElement("tr");
-            headers.forEach(header => {
-                let th = document.createElement("th");
-                th.innerText = header;
-                tr.appendChild(th);
+        let tr = document.createElement("tr");
+        headers.forEach(header => {
+            let th = document.createElement("th");
+            th.innerText = header;
+            tr.appendChild(th);
+        });
+        tableHeaders.appendChild(tr);
+        headersInserted = true;
+    }
+
+    function updateOrCreateRow(rowData) {
+        const timestamp = rowData[0];
+        let existingRow = document.getElementById(`row-${timestamp}`);
+
+        if (!existingRow) {
+            existingRow = document.createElement("tr");
+            existingRow.id = `row-${timestamp}`;
+
+            rowData.forEach((cellData, index) => {
+                let td = document.createElement("td");
+                td.innerText = cellData;
+                existingRow.appendChild(td);
             });
-            tableHeaders.appendChild(tr);
-            headersInserted = true;
+
+            // Add comment input field
+            let commentTd = document.createElement("td");
+            let commentInput = document.createElement("input");
+            commentInput.type = "text";
+            commentInput.name = "comment";
+            commentInput.value = comments[timestamp] || "";  // Load existing comment or leave blank
+
+            commentInput.addEventListener("input", function () {
+                comments[timestamp] = commentInput.value;  // Save comment in the comments object
+                saveComment(timestamp, commentInput.value);
+            });
+
+            commentTd.appendChild(commentInput);
+            existingRow.appendChild(commentTd);
+
+            document.getElementById("data-table-body").appendChild(existingRow);
+        } else {
+            // Update existing cells
+            rowData.forEach((cellData, index) => {
+                existingRow.cells[index].innerText = cellData;
+            });
         }
+    }
 
-        function updateOrCreateRow(rowData) {
-            const timestamp = rowData[0];
-            let existingRow = document.getElementById(`row-${timestamp}`);
+    function saveComment(timestamp, comment) {
+        fetch('/add_comment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'timestamp': timestamp,
+                'comment': comment
+            })
+        });
+    }
 
-            if (!existingRow) {
-                existingRow = document.createElement("tr");
-                existingRow.id = `row-${timestamp}`;
+    function fetchData() {
+        fetch('/get_latest_data')
+            .then(response => response.json())
+            .then(data => {
+                if (!headersInserted && data.length > 0) {
+                    insertHeaders();
+                }
 
-                rowData.forEach((cellData, index) => {
-                    let td = document.createElement("td");
-                    td.innerText = cellData;
-                    existingRow.appendChild(td);
+                data.forEach(row => {
+                    updateOrCreateRow(row);
                 });
+            });
+    }
 
-                // Add comment input field
-                let commentTd = document.createElement("td");
-                let commentInput = document.createElement("input");
-                commentInput.type = "text";
-                commentInput.name = "comment";
-                commentInput.value = comments[timestamp] || "";  // Load existing comment or leave blank
+    setInterval(fetchData, 1000);  // Fetch new data every second
+</script>
 
-                commentInput.addEventListener("input", function () {
-                    comments[timestamp] = commentInput.value;  // Save comment in the comments object
-                });
-
-                commentTd.appendChild(commentInput);
-                existingRow.appendChild(commentTd);
-
-                document.getElementById("data-table-body").appendChild(existingRow);
-            } else {
-                // Update existing cells
-                rowData.forEach((cellData, index) => {
-                    existingRow.cells[index].innerText = cellData;
-                });
-            }
-        }
-
-        function fetchData() {
-            fetch('/get_latest_data')
-                .then(response => response.json())
-                .then(data => {
-                    if (!headersInserted && data.length > 0) {
-                        insertHeaders();
-                    }
-
-                    data.forEach(row => {
-                        updateOrCreateRow(row);
-                    });
-                });
-        }
-
-        setInterval(fetchData, 1000);  // Fetch new data every second
-    </script>
 </body>
 </html>

@@ -19,6 +19,7 @@ class Logger:
         self.cap = cv2.VideoCapture(0)
         self.frame_thread = None
         self.frame_queue = queue.Queue()
+        self.comments = {}
 
         # Start the frame generation in a separate thread
         self.frame_thread = threading.Thread(target=self.gen_frames)
@@ -27,6 +28,7 @@ class Logger:
     def start_logging(self, power_setting, catalyst, microwave_duration):
         self.log_file_name = f"{power_setting}_{catalyst}_{microwave_duration}_sensor_log.csv"
         self.video_file_name = f"{power_setting}_{catalyst}_{microwave_duration}_video.avi"
+        self.comments.clear()
 
         self.logging_active = True
         log_sensors.start_logging(self.log_file_name)
@@ -34,6 +36,23 @@ class Logger:
     def stop_logging(self):
         log_sensors.stop_logging()
         self.logging_active = False
+
+    def log_comment(self, timestamp, comment):
+        self.comments[timestamp] = comment  # Save the comment in the dictionary
+        if self.log_file_name:
+            with open(self.log_file_name, mode='r+', newline='') as file:
+                reader = csv.reader(file)
+                rows = list(reader)
+                file.seek(0)
+                writer = csv.writer(file)
+
+                for row in rows:
+                    if row[0] == timestamp:  # Match the timestamp
+                        if len(row) == 6:  # If comment column is missing, add it
+                            row.append(comment)
+                        else:
+                            row[6] = comment  # Update the existing comment
+                    writer.writerow(row)
 
     def gen_frames(self):
         if not self.cap.isOpened():
@@ -143,6 +162,13 @@ def get_latest_data():
         rounded_data.append(rounded_row)
 
     return jsonify(rounded_data[-10:])
+
+@app.route('/add_comment', methods=['POST'])
+def add_comment():
+    timestamp = request.form['timestamp']
+    comment = request.form['comment']
+    logger.log_comment(timestamp, comment)
+    return jsonify(success=True)
 
 @app.route('/download_log')
 def download_log():
