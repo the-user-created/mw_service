@@ -17,6 +17,10 @@ class Logger:
         self.cap = cv2.VideoCapture(0)
         self.frame_thread = None
 
+        # Start the frame generation in a separate thread
+        self.frame_thread = threading.Thread(target=self.gen_frames)
+        self.frame_thread.start()
+
     def start_logging(self, power_setting, catalyst):
         self.log_file_name = f"{power_setting}_{catalyst}_sensor_log.csv"
         self.video_file_name = f"{power_setting}_{catalyst}_video.avi"
@@ -27,17 +31,9 @@ class Logger:
         self.logging_active = True
         log_sensors.start_logging(self.log_file_name)
 
-        # Start the frame generation in a separate thread
-        self.frame_thread = threading.Thread(target=self.gen_frames)
-        self.frame_thread.start()
-
     def stop_logging(self):
         log_sensors.stop_logging()
         self.logging_active = False
-
-        # Ensure the frame thread is properly stopped
-        if self.frame_thread is not None:
-            self.frame_thread.join()
 
     def gen_frames(self):
         if not self.cap.isOpened():
@@ -56,6 +52,10 @@ class Logger:
                     self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 20.0, (640, 480))
                     has_setup_writer = True
                     print(f"Video writer set up with file name: {self.video_file_name}")
+                elif not self.logging_active:
+                    has_setup_writer = False
+                    self.video_writer = None
+                    print("Video writer has been reset.")
 
                 success, frame = self.cap.read()
                 if not success:
@@ -155,3 +155,7 @@ if __name__ == '__main__':
         if logger.cap.isOpened():
             logger.cap.release()
             print("Camera released.")
+
+        # Ensure the frame thread is properly stopped
+        if logger.frame_thread is not None:
+            logger.frame_thread.join()
