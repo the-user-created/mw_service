@@ -58,11 +58,18 @@ def start_logging():
 
 @app.route('/stop', methods=['POST'])
 def stop_logging():
+    global logging_active
     log_sensors.stop_logging()
     logging_active = False
 
     # Stop video recording
     stop_video_recording()
+
+    # Ensure the camera is fully released
+    cap = cv2.VideoCapture(0)
+    if cap.isOpened():
+        cap.release()
+        print("Camera released after logging stopped.")
 
     return redirect(url_for('index'))
 
@@ -169,7 +176,7 @@ def download_video():
     print("Download video request received.")
     print(f"Video file name: {video_file_name}")
     if video_file_name and os.path.exists(video_file_name):
-        return send_from_directory(directory=os.getcwd(), filename=video_file_name, as_attachment=True, mimetype='video/avi', path=os.path.basename(video_file_name))
+        return send_from_directory(directory=os.getcwd(), filename=video_file_name, as_attachment=True, mimetype='video/avi', cache_timeout=0, path="./")
     return "Video file not found", 404
 
 
