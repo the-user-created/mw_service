@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, Response, jsonify, send_from_directory
+from flask import Flask, render_template, redirect, url_for, request, Response, jsonify, send_from_directory, g
 import log_sensors
 import csv
 import os
@@ -8,9 +8,29 @@ import threading
 app = Flask(__name__)
 
 # Initialize global variables for dynamic log file naming and video file naming
-log_file_name = None
-video_file_name = None
-logging_active = False  # To track if logging is currently active
+def get_log_file_name() -> str | None:
+    if 'log_file_name' not in g:
+        g.log_file_name = None
+    return g.log_file_name
+
+def set_log_file_name(value) -> None:
+    g.log_file_name = value
+
+def get_video_file_name() -> str | None:
+    if 'video_file_name' not in g:
+        g.video_file_name = None
+    return g.video_file_name
+
+def set_video_file_name(value) -> None:
+    g.video_file_name = value
+
+def is_logging_active() -> bool:
+    if 'logging_active' not in g:
+        g.logging_active = False
+    return g.logging_active
+
+def set_logging_active(value) -> None:
+    g.logging_active = value
 
 # Global variables to hold the threads
 video_thread = None
@@ -19,12 +39,10 @@ video_writer = None
 
 @app.route('/')
 def index():
-    data = []
     try:
-        if log_file_name:
-            with open(log_file_name, newline='') as csvfile:
-                reader = csv.reader(csvfile)
-                data = list(reader)
+        with open(get_log_file_name(), newline='') as csvfile:
+            reader = csv.reader(csvfile)
+            data = list(reader)
     except FileNotFoundError:
         data = []
 
@@ -33,21 +51,23 @@ def index():
 
 @app.route('/start', methods=['POST'])
 def start_logging():
-    global log_file_name, video_file_name, logging_active, video_thread
+    global video_thread
 
     power_setting = request.form['power']
     catalyst = request.form['catalyst']
 
     # Create unique log file and video file names
-    log_file_name = f"{power_setting}_{catalyst}_sensor_log.csv"
-    video_file_name = f"{power_setting}_{catalyst}_video.avi"
+    set_log_file_name(f"{power_setting}_{catalyst}_log.csv")
+    set_video_file_name(f"{power_setting}_{catalyst}_video.avi")
+    print(f"Log file name: {get_log_file_name()}")
+    print(f"Video file name: {get_video_file_name()}")
 
     # Start logging with the new file name
-    logging_active = True
-    log_sensors.start_logging(log_file_name)
+    set_logging_active(True)
+    log_sensors.start_logging(get_log_file_name())
 
     # Start video recording in a new thread
-    video_thread = threading.Thread(target=start_video_recording, args=(video_file_name,))
+    video_thread = threading.Thread(target=start_video_recording, args=(get_video_file_name(),))
     video_thread.start()
 
     return redirect(url_for('index'))
@@ -55,10 +75,8 @@ def start_logging():
 
 @app.route('/stop', methods=['POST'])
 def stop_logging():
-    global logging_active
-
     log_sensors.stop_logging()
-    logging_active = False
+    set_logging_active(False)
 
     # Stop video recording
     stop_video_recording()
@@ -125,12 +143,10 @@ def video_feed():
 
 @app.route('/get_latest_data')
 def get_latest_data():
-    data = []
     try:
-        if log_file_name:
-            with open(log_file_name, newline='') as csvfile:
-                reader = csv.reader(csvfile)
-                data = list(reader)
+        with open(get_log_file_name(), newline='') as csvfile:
+            reader = csv.reader(csvfile)
+            data = list(reader)
     except FileNotFoundError:
         data = []
 
@@ -151,16 +167,21 @@ def get_latest_data():
 
 @app.route('/download_log')
 def download_log():
-    if log_file_name and os.path.exists(log_file_name):
-        directory = os.path.dirname(os.path.abspath(log_file_name))
-        return send_from_directory(directory=directory, path=os.path.basename(log_file_name), as_attachment=True)
+    # Check if the file name is not None and the file exists
+    print("Download log request received.")
+    print(f"Log file name: {get_log_file_name()}")
+    if get_log_file_name() and os.path.exists(get_log_file_name()):
+        directory = os.path.dirname(os.path.abspath(get_log_file_name()))
+        return send_from_directory(directory=directory, path=os.path.basename(get_log_file_name()), as_attachment=True)
     return "Log file not found", 404
 
 
 @app.route('/download_video')
 def download_video():
-    if video_file_name and os.path.exists(video_file_name):
-        return send_from_directory(directory=os.getcwd(), filename=video_file_name, as_attachment=True, mimetype='video/avi', path=os.path.basename(video_file_name))
+    print("Download video request received.")
+    print(f"Video file name: {get_video_file_name()}")
+    if get_video_file_name() and os.path.exists(get_video_file_name()):
+        return send_from_directory(directory=os.getcwd(), filename=get_video_file_name(), as_attachment=True, mimetype='video/avi', path=os.path.basename(get_video_file_name()))
     return "Video file not found", 404
 
 
