@@ -4,7 +4,6 @@ import csv
 import os
 import cv2
 import threading
-import queue
 
 app = Flask(__name__)
 
@@ -17,7 +16,6 @@ class Logger:
         self.video_writer = None
         self.cap = cv2.VideoCapture(0)
         self.frame_thread = None
-        self.frame_queue = queue.Queue()
 
     def start_logging(self, power_setting, catalyst):
         self.log_file_name = f"{power_setting}_{catalyst}_sensor_log.csv"
@@ -65,18 +63,13 @@ class Logger:
                     self.video_writer.write(frame)
                 ret, buffer = cv2.imencode('.jpg', frame)
                 frame = buffer.tobytes()
-                self.frame_queue.put(frame)
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
         except Exception as e:
             print(f"Error while reading camera stream: {e}")
         finally:
             if self.video_writer is not None:
                 self.video_writer.release()
-
-    def get_frame(self):
-        while True:
-            frame = self.frame_queue.get()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 logger = Logger()
 
@@ -107,7 +100,7 @@ def stop_logging():
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(logger.get_frame(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(logger.gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/get_latest_data')
 def get_latest_data():
