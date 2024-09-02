@@ -39,6 +39,7 @@ video_writer = None
 
 @app.route('/')
 def index():
+    data = []
     try:
         if get_log_file_name() is not None:
             with open(get_log_file_name(), newline='') as csvfile:
@@ -144,6 +145,7 @@ def video_feed():
 
 @app.route('/get_latest_data')
 def get_latest_data():
+    data = []
     try:
         if get_log_file_name() is not None:
             with open(get_log_file_name(), newline='') as csvfile:
