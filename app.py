@@ -46,6 +46,7 @@ def start_logging():
     video_file_name = f"{power_setting}_{catalyst}_video.avi"
     print(f"Log file name: {log_file_name}")
     print(f"Video file name: {video_file_name}")
+    print(f"CWD: {os.getcwd()}")
 
     # Start logging with the new file name
     logging_active = True
@@ -67,19 +68,12 @@ def stop_logging():
     # Stop video recording
     stop_video_recording()
 
-    # Ensure the camera is fully released
-    # cap = cv2.VideoCapture(0)
-    #if cap.isOpened():
-    #    cap.release()
-    #    print("Camera released after logging stopped.")
-
     return redirect(url_for('index'))
 
 
 def start_video_recording(filename):
     global video_writer, recording_active, cap
     recording_active = True
-    # cap = cv2.VideoCapture(0)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     video_writer = cv2.VideoWriter(filename, fourcc, 20.0, (640, 480))
 
@@ -90,7 +84,6 @@ def start_video_recording(filename):
         else:
             break
 
-    # cap.release()
     video_writer.release()
 
 def stop_video_recording():
@@ -104,10 +97,9 @@ def stop_video_recording():
 def gen_frames():
     global cap
     print("Attempting to open the camera...")
-    # cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
-        print("Failed to open camera.")
+        print("Camera is open already.")
         return
 
     print("Camera opened successfully.")
@@ -124,9 +116,6 @@ def gen_frames():
                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
     except Exception as e:
         print(f"Error while reading camera stream: {e}")
-    finally:
-        # cap.release()
-        print("Camera released in gen_frames.")
 
 
 @app.route('/video_feed')
