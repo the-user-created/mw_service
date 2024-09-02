@@ -73,9 +73,10 @@ def stop_logging() -> Response:
     set_logging_active(False)
 
     # Ensure the camera is fully released
-    with cv2.VideoCapture(0) as cap:
-        if cap.isOpened():
-            print("Camera released after logging stopped.")
+    cap = cv2.VideoCapture(0)
+    if cap.isOpened():
+        cap.release()
+        print("Camera released after logging stopped.")
 
     return redirect(url_for('index'))
 
@@ -83,25 +84,27 @@ def stop_logging() -> Response:
 # Video streaming function using GStreamer
 def gen_frames() -> bytes:
     print("Attempting to open the camera...")
-    with cv2.VideoCapture(0) as cap:
-        if not cap.isOpened():
-            print("Failed to open camera.")
-            return
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Failed to open camera.")
+        return
 
-        print("Camera opened successfully.")
-        try:
-            while True:
-                success, frame = cap.read()
-                if not success:
-                    print("Failed to capture frame.")
-                    break
-                else:
-                    ret, buffer = cv2.imencode('.jpg', frame)
-                    frame = buffer.tobytes()
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        except Exception as e:
-            print(f"Error while reading camera stream: {e}")
+    print("Camera opened successfully.")
+    try:
+        while True:
+            success, frame = cap.read()
+            if not success:
+                print("Failed to capture frame.")
+                break
+            else:
+                ret, buffer = cv2.imencode('.jpg', frame)
+                frame = buffer.tobytes()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    except Exception as e:
+        print(f"Error while reading camera stream: {e}")
+    finally:
+        cap.release()
 
 
 @app.route('/video_feed')
