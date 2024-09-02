@@ -4,6 +4,8 @@ import csv
 import os
 import cv2
 import threading
+import queue
+import time
 
 app = Flask(__name__)
 
@@ -16,6 +18,7 @@ class Logger:
         self.video_writer = None
         self.cap = cv2.VideoCapture(0)
         self.frame_thread = None
+        self.frame_queue = queue.Queue()
 
         # Start the frame generation in a separate thread
         self.frame_thread = threading.Thread(target=self.gen_frames)
@@ -41,18 +44,21 @@ class Logger:
             return
 
         print("Camera opened successfully.")
-
         has_setup_writer = False
-
         try:
             while self.providing_frames:
                 # Set up video writer if it hasn't been done yet
                 if not has_setup_writer and self.logging_active:
+                    start_time = time.time()
+                    frame_count = 0
                     fourcc = cv2.VideoWriter_fourcc(*'XVID')
                     self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 15.0, (640, 480))
                     has_setup_writer = True
                     print(f"Video writer set up with file name: {self.video_file_name}")
-                elif not self.logging_active:
+                elif not self.logging_active and has_setup_writer:
+                    end_time = time.time()
+                    print(f"Captured {frame_count} frames in {end_time - start_time} seconds.")
+                    print(f"Frames per second: {frame_count / (end_time - start_time)}")
                     has_setup_writer = False
                     self.video_writer = None
 
@@ -63,18 +69,24 @@ class Logger:
 
                 # Write frame to video if recording is active
                 if self.logging_active and self.video_writer is not None:
+                    frame_count += 1
                     self.video_writer.write(frame)
 
                 # Send frame as JPEG to the client
                 ret, buffer = cv2.imencode('.jpg', frame)
                 frame = buffer.tobytes()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                self.frame_queue.put(frame)
         except Exception as e:
             print(f"Error while reading camera stream: {e}")
         finally:
             if self.video_writer is not None:
                 self.video_writer.release()
+
+    def get_frame(self):
+        while True:
+            frame = self.frame_queue.get()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 @app.route('/')
 def index():
@@ -103,7 +115,7 @@ def stop_logging():
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(logger.gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(logger.get_frame(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/get_latest_data')
 def get_latest_data():
