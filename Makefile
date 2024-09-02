@@ -28,7 +28,7 @@ run:
 clean:
 	rm -rf $(VENV_DIR)
 
-clean_logs:
+rm_logs:
 	rm -rf *.avi *.csv
 
 .PHONY: all setup install run clean
