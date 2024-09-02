@@ -150,7 +150,9 @@ def download_log():
 @app.route('/download_video')
 def download_video():
     if logger.video_file_name and os.path.exists(logger.video_file_name):
-        return send_from_directory(directory=os.getcwd(), filename=logger.video_file_name, as_attachment=True, mimetype='video/avi', path="./")
+        directory = os.path.dirname(os.path.abspath(logger.video_file_name))
+        filename = os.path.basename(logger.video_file_name)
+        return send_from_directory(directory=directory, path=filename, as_attachment=True, mimetype='video/x-msvideo')
     return "Video file not found", 404
 
 if __name__ == '__main__':
