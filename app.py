@@ -3,6 +3,7 @@ import log_sensors
 import csv
 import os
 import cv2
+import threading
 
 app = Flask(__name__)
 
@@ -11,6 +12,10 @@ log_file_name = None
 video_file_name = None
 logging_active = False  # To track if logging is currently active
 
+# Global variables to hold the threads
+video_thread = None
+recording_active = False
+video_writer = None
 
 @app.route('/')
 def index():
@@ -28,7 +33,7 @@ def index():
 
 @app.route('/start', methods=['POST'])
 def start_logging():
-    global log_file_name, video_file_name, logging_active
+    global log_file_name, video_file_name, logging_active, video_thread
 
     power_setting = request.form['power']
     catalyst = request.form['catalyst']
@@ -41,6 +46,10 @@ def start_logging():
     logging_active = True
     log_sensors.start_logging(log_file_name)
 
+    # Start video recording in a new thread
+    video_thread = threading.Thread(target=start_video_recording, args=(video_file_name,))
+    video_thread.start()
+
     return redirect(url_for('index'))
 
 
@@ -51,13 +60,34 @@ def stop_logging():
     log_sensors.stop_logging()
     logging_active = False
 
-    # Ensure the camera is fully released
-    cap = cv2.VideoCapture(0)
-    if cap.isOpened():
-        cap.release()
-        print("Camera released after logging stopped.")
+    # Stop video recording
+    stop_video_recording()
 
     return redirect(url_for('index'))
+
+
+def start_video_recording(filename):
+    global video_writer, recording_active
+    recording_active = True
+    cap = cv2.VideoCapture(0)
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    video_writer = cv2.VideoWriter(filename, fourcc, 20.0, (640, 480))
+
+    while recording_active:
+        ret, frame = cap.read()
+        if ret:
+            video_writer.write(frame)
+        else:
+            break
+
+    cap.release()
+    video_writer.release()
+
+def stop_video_recording():
+    global recording_active
+    recording_active = False
+    if video_thread is not None:
+        video_thread.join()  # Wait for the video recording thread to finis
 
 
 # Video streaming function using GStreamer
