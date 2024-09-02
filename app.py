@@ -1,10 +1,10 @@
-import time
-
-from flask import Flask, render_template, redirect, url_for, request, Response, jsonify, send_from_directory, g
+from flask import Flask, render_template, redirect, url_for, request, Response, jsonify, send_from_directory
 import log_sensors
 import csv
 import os
 import cv2
+import threading
+import queue
 
 app = Flask(__name__)
 
@@ -16,6 +16,8 @@ class Logger:
         self.recording_active = False
         self.video_writer = None
         self.cap = cv2.VideoCapture(0)
+        self.frame_thread = None
+        self.frame_queue = queue.Queue()
 
     def start_logging(self, power_setting, catalyst):
         self.log_file_name = f"{power_setting}_{catalyst}_sensor_log.csv"
@@ -28,10 +30,18 @@ class Logger:
         self.logging_active = True
         log_sensors.start_logging(self.log_file_name)
 
+        # Start the frame generation in a separate thread
+        self.frame_thread = threading.Thread(target=self.gen_frames)
+        self.frame_thread.start()
+
     def stop_logging(self):
         log_sensors.stop_logging()
         self.logging_active = False
         self.recording_active = False
+
+        # Ensure the frame thread is properly stopped
+        if self.frame_thread is not None:
+            self.frame_thread.join()
 
     def gen_frames(self):
         if not self.cap.isOpened():
@@ -40,11 +50,12 @@ class Logger:
 
         print("Camera opened successfully.")
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        print(f"Creating video writer with file name: {self.video_file_name}")
         self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 20.0, (640, 480))
         print(f"Video writer created: {self.video_writer}")
 
         try:
-            while True:
+            while self.recording_active:
                 success, frame = self.cap.read()
                 if not success:
                     print("Failed to capture frame.")
@@ -54,13 +65,18 @@ class Logger:
                     self.video_writer.write(frame)
                 ret, buffer = cv2.imencode('.jpg', frame)
                 frame = buffer.tobytes()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                self.frame_queue.put(frame)
         except Exception as e:
             print(f"Error while reading camera stream: {e}")
         finally:
             if self.video_writer is not None:
                 self.video_writer.release()
+
+    def get_frame(self):
+        while True:
+            frame = self.frame_queue.get()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 logger = Logger()
 
@@ -91,7 +107,7 @@ def stop_logging():
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(logger.gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(logger.get_frame(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/get_latest_data')
 def get_latest_data():
