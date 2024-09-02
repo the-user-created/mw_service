@@ -5,7 +5,6 @@ import log_sensors
 import csv
 import os
 import cv2
-import threading
 
 app = Flask(__name__)
 
@@ -64,6 +63,19 @@ class Logger:
                 self.video_writer.release()
 
 logger = Logger()
+
+@app.route('/')
+def index():
+    data = []
+    try:
+        if logger.log_file_name is not None:
+            with open(logger.log_file_name, newline='') as csvfile:
+                reader = csv.reader(csvfile)
+                data = list(reader)
+    except FileNotFoundError:
+        data = []
+
+    return render_template('index.html', data=data)
 
 @app.route('/start', methods=['POST'])
 def start_logging():
