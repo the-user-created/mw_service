@@ -40,10 +40,11 @@ video_writer = None
 @app.route('/')
 def index():
     try:
-        with open(get_log_file_name(), newline='') as csvfile:
-            reader = csv.reader(csvfile)
-            data = list(reader)
-    except FileNotFoundError or TypeError:
+        if get_log_file_name() is not None:
+            with open(get_log_file_name(), newline='') as csvfile:
+                reader = csv.reader(csvfile)
+                data = list(reader)
+    except FileNotFoundError:
         data = []
 
     return render_template('index.html', data=data)
@@ -144,10 +145,11 @@ def video_feed():
 @app.route('/get_latest_data')
 def get_latest_data():
     try:
-        with open(get_log_file_name(), newline='') as csvfile:
-            reader = csv.reader(csvfile)
-            data = list(reader)
-    except FileNotFoundError or TypeError:
+        if get_log_file_name() is not None:
+            with open(get_log_file_name(), newline='') as csvfile:
+                reader = csv.reader(csvfile)
+                data = list(reader)
+    except FileNotFoundError:
         data = []
 
     # Skip the first row, which contains the headers
