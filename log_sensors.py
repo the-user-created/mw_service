@@ -89,7 +89,7 @@ def log_data(log_file):
         writer = csv.writer(file)
 
         if file.tell() == 0:  # Write header if file is empty
-            header = ['Timestamp'] + [f'Thermistor{i+1}' for i in range(no_of_thermistors)] + ['Thermocouple']
+            header = ['Timestamp'] + [f'Thermistor{i+1}' for i in range(no_of_thermistors)] + ['Thermocouple', 'Comment']
             writer.writerow(header)
 
         while logging_active:
@@ -102,7 +102,7 @@ def log_data(log_file):
             thermocouple_temp = max6675.read_temp()
 
             # Log the data
-            writer.writerow([timestamp] + thermistor_readings + [thermocouple_temp])
+            writer.writerow([timestamp] + thermistor_readings + [thermocouple_temp, ''])  # Empty comment field
 
             # Print debug information
             thermistor_info = " | ".join([f"Thermistor{i+1}: {thermistor_readings[i]:.2f} °C" for i in range(no_of_thermistors)])

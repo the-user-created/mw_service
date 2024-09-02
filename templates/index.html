@@ -33,7 +33,7 @@
     <h1>Temperature Logger and Live Camera Feed</h1>
 
     <!-- Form to start and stop logging -->
-    <<form method="POST" action="/start">
+    <form method="POST" action="/start">
        <label for="power">Power Setting:</label>
        <input type="text" id="power" name="power" required>
 
@@ -83,7 +83,7 @@
         let headersInserted = false;
 
         function insertHeaders() {
-            const headers = ['Timestamp', 'Thermistor 1', 'Thermistor 2', 'Thermistor 3', 'Thermistor 4', 'Thermocouple'];
+            const headers = ['Timestamp', 'Thermistor 1', 'Thermistor 2', 'Thermistor 3', 'Thermistor 4', 'Thermocouple', 'Comment'];
             let tableHeaders = document.getElementById("table-headers");
 
             let tr = document.createElement("tr");
@@ -97,29 +97,56 @@
         }
 
         function fetchData() {
-            fetch('/get_latest_data')
-                .then(response => response.json())
-                .then(data => {
-                    let tableBody = document.getElementById("data-table-body");
-                    tableBody.innerHTML = "";  // Clear existing rows
+        fetch('/get_latest_data')
+            .then(response => response.json())
+            .then(data => {
+                let tableBody = document.getElementById("data-table-body");
+                tableBody.innerHTML = "";  // Clear existing rows
 
-                    if (!headersInserted && data.length > 0) {
-                        insertHeaders();
-                    }
+                if (!headersInserted && data.length > 0) {
+                    insertHeaders();
+                }
 
-                    data.forEach(row => {
-                        let tr = document.createElement("tr");
-                        row.forEach(cell => {
-                            let td = document.createElement("td");
-                            td.innerText = cell;
-                            tr.appendChild(td);
-                        });
-                        tableBody.appendChild(tr);
+                data.forEach(row => {
+                    let tr = document.createElement("tr");
+                    row.forEach((cell, index) => {
+                        let td = document.createElement("td");
+                        td.innerText = cell;
+                        tr.appendChild(td);
                     });
-                });
-        }
 
-        setInterval(fetchData, 1000);  // Fetch new data every second
-    </script>
+                    // Add comment input field
+                    let commentTd = document.createElement("td");
+                    let commentForm = document.createElement("form");
+                    commentForm.method = "POST";
+                    commentForm.action = "/add_comment";
+
+                    let timestampInput = document.createElement("input");
+                    timestampInput.type = "hidden";
+                    timestampInput.name = "timestamp";
+                    timestampInput.value = row[0];  // Assuming timestamp is the first column
+
+                    let commentInput = document.createElement("input");
+                    commentInput.type = "text";
+                    commentInput.name = "comment";
+
+                    let commentSubmit = document.createElement("button");
+                    commentSubmit.type = "submit";
+                    commentSubmit.innerText = "Add Comment";
+
+                    commentForm.appendChild(timestampInput);
+                    commentForm.appendChild(commentInput);
+                    commentForm.appendChild(commentSubmit);
+
+                    commentTd.appendChild(commentForm);
+                    tr.appendChild(commentTd);
+
+                    tableBody.appendChild(tr);
+                });
+            });
+    }
+
+    setInterval(fetchData, 1000);  // Fetch new data every second
+</script>
 </body>
 </html>
