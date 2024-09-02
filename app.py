@@ -49,7 +49,7 @@ class Logger:
                 # Set up video writer if it hasn't been done yet
                 if not has_setup_writer and self.logging_active:
                     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-                    self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 20.0, (640, 480))
+                    self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 15.0, (640, 480))
                     has_setup_writer = True
                     print(f"Video writer set up with file name: {self.video_file_name}")
                 elif not self.logging_active:
