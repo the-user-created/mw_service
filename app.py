@@ -160,7 +160,7 @@ def download_log():
 @app.route('/download_video')
 def download_video():
     if video_file_name and os.path.exists(video_file_name):
-        return send_from_directory(directory=os.getcwd(), filename=video_file_name, as_attachment=True)
+        return send_from_directory(directory=os.getcwd(), filename=video_file_name, as_attachment=True, mimetype='video/avi', path=os.path.basename(video_file_name))
     return "Video file not found", 404
 
 
