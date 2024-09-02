@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Logger and Camera Feed</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            font-weight: bold;
+            background-color: #f2f2f2;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+        }
+        .container div {
+            width: 45%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Temperature Logger and Live Camera Feed</h1>
+
+    <!-- Form to start and stop logging -->
+    <form method="POST" action="/start">
+       <label for="power">Power Setting:</label>
+       <input type="text" id="power" name="power" required>
+    
+       <label for="catalyst">Catalyst:</label>
+       <input type="text" id="catalyst" name="catalyst" required>
+    
+       <button type="submit">Start Logging</button>
+    </form>
+    
+    <form method="POST" action="/stop">
+        <button type="submit">Stop Logging</button>
+    </form>
+
+    <div class="container">
+        <div>
+            <h2>Recorded Data</h2>
+            <table>
+                <thead id="table-headers">
+                    <!-- Table headers will be inserted here dynamically -->
+                </thead>
+                <tbody id="data-table-body">
+                    <!-- Real-time data will be inserted here dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <div>
+            <h2>Live Camera Feed</h2>
+            <img src="{{ url_for('video_feed') }}" alt="Live Feed" width="100%">
+        </div>
+    </div>
+
+    <div>
+        <h3>After you stop logging, your files will be available for 10 minutes:</h3>
+        <p>Download them before they are deleted:</p>
+        <a href="/download_log">Download Log File</a> |
+        <a href="/download_video">Download Video File</a>
+    </div>
+
+    <script>
+        let headersInserted = false;
+
+        function insertHeaders() {
+            const headers = ['Timestamp', 'Thermistor 1', 'Thermistor 2', 'Thermistor 3', 'Thermistor 4', 'Thermocouple'];
+            let tableHeaders = document.getElementById("table-headers");
+
+            let tr = document.createElement("tr");
+            headers.forEach(header => {
+                let th = document.createElement("th");
+                th.innerText = header;
+                tr.appendChild(th);
+            });
+            tableHeaders.appendChild(tr);
+            headersInserted = true;
+        }
+
+        function fetchData() {
+            fetch('/get_latest_data')
+                .then(response => response.json())
+                .then(data => {
+                    let tableBody = document.getElementById("data-table-body");
+                    tableBody.innerHTML = "";  // Clear existing rows
+
+                    if (!headersInserted && data.length > 0) {
+                        insertHeaders();
+                    }
+
+                    data.forEach(row => {
+                        let tr = document.createElement("tr");
+                        row.forEach(cell => {
+                            let td = document.createElement("td");
+                            td.innerText = cell;
+                            tr.appendChild(td);
+                        });
+                        tableBody.appendChild(tr);
+                    });
+                });
+        }
+
+        setInterval(fetchData, 1000);  // Fetch new data every second
+    </script>
+</body>
+</html>
