@@ -50,13 +50,13 @@ def start_logging():
     print(f"Video file name: {video_file_name}")
     print(f"CWD: {os.getcwd()}")
 
-    # Start logging with the new file name
-    logging_active = True
-    log_sensors.start_logging(log_file_name)
-
     # Start video recording in a new thread
     video_thread = threading.Thread(target=start_video_recording, args=(video_file_name,))
     video_thread.start()
+
+    # Start logging with the new file name
+    logging_active = True
+    log_sensors.start_logging(log_file_name)
 
     return redirect(url_for('index'))
 
