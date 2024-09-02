@@ -52,7 +52,7 @@ class Logger:
                     start_time = time.time()
                     frame_count = 0
                     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-                    self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 15.0, (640, 480))
+                    self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 10.2024, (640, 480))
                     has_setup_writer = True
                     print(f"Video writer set up with file name: {self.video_file_name}")
                 elif not self.logging_active and has_setup_writer:
