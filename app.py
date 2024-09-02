@@ -38,7 +38,7 @@ def index():
 
 @app.route('/start', methods=['POST'])
 def start_logging():
-    global video_thread, log_file_name, video_file_name, logging_active
+    global video_thread, log_file_name, video_file_name, logging_active, recording_active
 
     power_setting = request.form['power']
     catalyst = request.form['catalyst']
@@ -50,9 +50,8 @@ def start_logging():
     print(f"Video file name: {video_file_name}")
     print(f"CWD: {os.getcwd()}")
 
-    # Start video recording in a new thread
-    video_thread = threading.Thread(target=start_video_recording, args=(video_file_name,))
-    video_thread.start()
+    # Start video recording
+    recording_active = True
 
     # Start logging with the new file name
     logging_active = True
@@ -63,71 +62,45 @@ def start_logging():
 
 @app.route('/stop', methods=['POST'])
 def stop_logging():
-    global logging_active
+    global logging_active, recording_active
     log_sensors.stop_logging()
     logging_active = False
 
     # Stop video recording
-    stop_video_recording()
+    recording_active = False
 
     return redirect(url_for('index'))
 
 
-def start_video_recording(filename):
-    global video_writer, recording_active, cap
-    recording_active = True
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    video_writer = cv2.VideoWriter(filename, fourcc, 20.0, (640, 480))
-
-    frame_count = 0
-    start_time = time.time()
-
-    while recording_active:
-        ret, frame = cap.read()
-        if ret:
-            video_writer.write(frame)
-            frame_count += 1
-        else:
-            break
-
-        # Log frame count every second
-        if time.time() - start_time >= 1:
-            print(f"Frames captured in the last second: {frame_count}")
-            frame_count = 0
-            start_time = time.time()
-
-    video_writer.release()
-
-def stop_video_recording():
-    global recording_active
-    recording_active = False
-    if video_thread is not None:
-        video_thread.join()  # Wait for the video recording thread to finis
-
-
-# Video streaming function using GStreamer
 def gen_frames():
-    global cap
+    global cap, recording_active, video_writer
     print("Attempting to open the camera...")
 
     if not cap.isOpened():
-        print("Camera is open already.")
+        print("Camera is already open.")
         return
 
     print("Camera opened successfully.")
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    video_writer = cv2.VideoWriter(video_file_name, fourcc, 20.0, (640, 480))
+
     try:
         while True:
             success, frame = cap.read()
             if not success:
                 print("Failed to capture frame.")
                 break
-            else:
-                ret, buffer = cv2.imencode('.jpg', frame)
-                frame = buffer.tobytes()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            if recording_active and video_writer is not None:
+                video_writer.write(frame)
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
     except Exception as e:
         print(f"Error while reading camera stream: {e}")
+    finally:
+        if video_writer is not None:
+            video_writer.release()
 
 
 @app.route('/video_feed')
