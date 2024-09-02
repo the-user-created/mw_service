@@ -34,16 +34,16 @@
 
     <!-- Form to start and stop logging -->
     <form method="POST" action="/start">
+       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
        <label for="power">Power Setting:</label>
        <input type="text" id="power" name="power" required>
-    
        <label for="catalyst">Catalyst:</label>
        <input type="text" id="catalyst" name="catalyst" required>
-    
        <button type="submit">Start Logging</button>
     </form>
-    
+
     <form method="POST" action="/stop">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">Stop Logging</button>
     </form>
 
@@ -62,7 +62,7 @@
 
         <div>
             <h2>Live Camera Feed</h2>
-            <img src="{{ url_for('video_feed') }}" alt="Live Feed" width="100%">
+            <img src="{{ url_for('video_feed') }}" alt="Live Camera Feed" width="100%">
         </div>
     </div>
 
@@ -110,6 +110,9 @@
                         });
                         tableBody.appendChild(tr);
                     });
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
                 });
         }
 

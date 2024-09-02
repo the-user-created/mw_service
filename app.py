@@ -3,9 +3,12 @@ import log_sensors
 import csv
 import os
 import cv2
+import threading
 
 app = Flask(__name__)
 
+# Global variables to hold the threads
+logging_thread = None
 
 def get_log_file_name() -> str | None:
     if 'log_file_name' not in g:
@@ -53,6 +56,8 @@ def index() -> str:
 
 @app.route('/start', methods=['POST'])
 def start_logging() -> Response:
+    global logging_thread
+
     power_setting = request.form['power']
     catalyst = request.form['catalyst']
 
@@ -62,15 +67,23 @@ def start_logging() -> Response:
 
     # Start logging with the new file name
     set_logging_active(True)
-    log_sensors.start_logging(get_log_file_name())
+
+    # Start logging in a separate thread
+    logging_thread = threading.Thread(target=log_sensors.start_logging, args=(get_log_file_name(),))
+    logging_thread.start()
 
     return redirect(url_for('index'))
 
 
 @app.route('/stop', methods=['POST'])
 def stop_logging() -> Response:
+    global logging_thread
+
     log_sensors.stop_logging()
     set_logging_active(False)
+
+    if logging_thread:
+        logging_thread.join()  # Wait for the logging thread to finish
 
     # Ensure the camera is fully released
     cap = cv2.VideoCapture(0)

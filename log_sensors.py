@@ -140,7 +140,3 @@ def run_logging() -> None:
     finally:
         spi.close()
         GPIO.cleanup()
-
-
-if __name__ == "__main__":
-    run_logging()
