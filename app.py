@@ -72,8 +72,7 @@ def start_logging() -> Response:
     # Start logging in a separate thread
     #logging_thread = threading.Thread(target=log_sensors.start_logging, args=(get_log_file_name(),))
     #logging_thread.start()
-    #log_sensors.start_logging(get_log_file_name())
-    log_sensors.run_logging(get_log_file_name())
+    log_sensors.start_logging(get_log_file_name())
 
     return redirect(url_for('index'))
 

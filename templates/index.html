@@ -36,8 +36,10 @@
     <form method="POST" action="/start">
        <label for="power">Power Setting:</label>
        <input type="text" id="power" name="power" required>
+
        <label for="catalyst">Catalyst:</label>
        <input type="text" id="catalyst" name="catalyst" required>
+
        <button type="submit">Start Logging</button>
     </form>
 
@@ -58,10 +60,10 @@
             </table>
         </div>
 
-        <!--<div>
+        <div>
             <h2>Live Camera Feed</h2>
-            <img src="{{ url_for('video_feed') }}" alt="Live Camera Feed" width="100%">
-        </div>-->
+            <img src="{{ url_for('video_feed') }}" alt="Live Feed" width="100%">
+        </div>
     </div>
 
     <div>
@@ -108,9 +110,6 @@
                         });
                         tableBody.appendChild(tr);
                     });
-                })
-                .catch(error => {
-                    console.error('Error fetching data:', error);
                 });
         }
 

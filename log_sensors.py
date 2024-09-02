@@ -4,40 +4,35 @@ from datetime import datetime
 import spidev
 import math
 import RPi.GPIO as GPIO
-import threading
 
 # Setup GPIO mode
 GPIO.setmode(GPIO.BCM)
 
-
 # --- MAX6675 Class ---
 class MAX6675:
-    def __init__(self, cs_pin) -> None:
+    def __init__(self, cs_pin):
         self.cs_pin = cs_pin
         GPIO.setup(self.cs_pin, GPIO.OUT)
         GPIO.output(self.cs_pin, GPIO.HIGH)
 
-    def read_temp(self) -> float:
+    def read_temp(self):
         GPIO.output(self.cs_pin, GPIO.LOW)
         time.sleep(0.01)
 
         # Open the SPI bus for MAX6675
         spi = spidev.SpiDev()
-        try:
-            spi.open(0, 1)  # Use SPI0.1 for MAX6675
-            spi.max_speed_hz = 500000
+        spi.open(0, 1)  # Use SPI0.1 for MAX6675
+        spi.max_speed_hz = 500000
 
-            # Read two bytes of data from MAX6675
-            value = spi.xfer2([0x00, 0x00])
-            GPIO.output(self.cs_pin, GPIO.HIGH)
-        finally:
-            spi.close()  # Close SPI after use
+        # Read two bytes of data from MAX6675
+        value = spi.xfer2([0x00, 0x00])
+        GPIO.output(self.cs_pin, GPIO.HIGH)
+        spi.close()  # Close SPI after use
 
         # Process raw temperature value
         raw_value = ((value[0] << 8) | value[1]) >> 3
         temp_c = raw_value * 0.25
         return round(temp_c, 2)  # Return temperature with 2 decimal places
-
 
 # Setup SPI for MCP3008 (SPI0.0)
 spi = spidev.SpiDev()
@@ -47,14 +42,8 @@ spi.max_speed_hz = 1000000
 # Number of thermistors to read
 no_of_thermistors = 4  # Adjust this value based on how many thermistors you want to log
 
-# Initialize MAX6675 on GPIO 7 (CS pin)
-max6675 = MAX6675(cs_pin=7)
-
-logging_active = threading.Event()  # A flag to control the logging loop
-
-
 # Function to read MCP3008 (single channel)
-def read_adc(adcnum) -> float:
+def read_adc(adcnum):
     if (adcnum > 7) or (adcnum < 0):
         return -1
     r = spi.xfer2([1, (8 + adcnum) << 4, 0])
@@ -62,9 +51,8 @@ def read_adc(adcnum) -> float:
     voltage = (adcout * 3.3) / 1024.0  # Convert raw ADC value to voltage (assuming 3.3V reference)
     return voltage
 
-
 # Function to convert voltage to temperature for thermistors
-def voltage_to_temperature(voltage) -> float:
+def voltage_to_temperature(voltage):
     if voltage <= 0:  # Check if voltage is valid
         return float('NaN')  # Return NaN to avoid division by zero
 
@@ -90,9 +78,13 @@ def voltage_to_temperature(voltage) -> float:
 
     return round(temp_c, 2)  # Return temperature with 2 decimal places
 
+# Initialize MAX6675 on GPIO 7 (CS pin)
+max6675 = MAX6675(cs_pin=7)
+
+logging_active = False  # A flag to control the logging loop
 
 # Log data function
-def log_data(log_file) -> None:
+def log_data(log_file):
     with open(log_file, mode='a', newline='') as file:
         writer = csv.writer(file)
 
@@ -119,24 +111,22 @@ def log_data(log_file) -> None:
             file.flush()
             time.sleep(10)
 
-
 # Start logging
-def start_logging(log_file) -> None:
-    logging_active.set()
+def start_logging(log_file):
+    global logging_active
+    logging_active = True
     log_data(log_file)
 
-
 # Stop logging
-def stop_logging() -> None:
-    logging_active.clear()
+def stop_logging():
+    global logging_active
+    logging_active = False
     print("Logging stopped.")
 
-
-def run_logging(log_file) -> None:
+if __name__ == "__main__":
     try:
-        start_logging(log_file)
+        start_logging("temperature_log.csv")
     except KeyboardInterrupt:
         stop_logging()
-    finally:
-        spi.close()
-        GPIO.cleanup()
+        spi.close()  # Close SPI before exiting
+        GPIO.cleanup()  # Clean up GPIO pins properly
