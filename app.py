@@ -7,6 +7,8 @@ import threading
 
 app = Flask(__name__)
 
+cap = cv2.VideoCapture(0)
+
 # Initialize global variables for dynamic log file naming and video file naming
 log_file_name = None
 video_file_name = None
@@ -66,7 +68,7 @@ def stop_logging():
     stop_video_recording()
 
     # Ensure the camera is fully released
-    cap = cv2.VideoCapture(0)
+    # cap = cv2.VideoCapture(0)
     if cap.isOpened():
         cap.release()
         print("Camera released after logging stopped.")
@@ -77,7 +79,7 @@ def stop_logging():
 def start_video_recording(filename):
     global video_writer, recording_active
     recording_active = True
-    cap = cv2.VideoCapture(0)
+    # cap = cv2.VideoCapture(0)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     video_writer = cv2.VideoWriter(filename, fourcc, 20.0, (640, 480))
 
@@ -101,7 +103,7 @@ def stop_video_recording():
 # Video streaming function using GStreamer
 def gen_frames():
     print("Attempting to open the camera...")
-    cap = cv2.VideoCapture(0)
+    # cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
         print("Failed to open camera.")
@@ -176,7 +178,8 @@ def download_video():
     print("Download video request received.")
     print(f"Video file name: {video_file_name}")
     if video_file_name and os.path.exists(video_file_name):
-        return send_from_directory(directory=os.getcwd(), filename=video_file_name, as_attachment=True, mimetype='video/avi', cache_timeout=0, path="./")
+        print("Video file found.")
+        return send_from_directory(directory=os.getcwd(), filename=video_file_name, as_attachment=True, mimetype='video/avi', path="./")
     return "Video file not found", 404
 
 
