@@ -34,7 +34,6 @@
 
     <!-- Form to start and stop logging -->
     <form method="POST" action="/start">
-       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
        <label for="power">Power Setting:</label>
        <input type="text" id="power" name="power" required>
        <label for="catalyst">Catalyst:</label>
@@ -43,7 +42,6 @@
     </form>
 
     <form method="POST" action="/stop">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">Stop Logging</button>
     </form>
 
