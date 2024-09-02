@@ -43,7 +43,7 @@ def index():
         with open(get_log_file_name(), newline='') as csvfile:
             reader = csv.reader(csvfile)
             data = list(reader)
-    except FileNotFoundError:
+    except FileNotFoundError or TypeError:
         data = []
 
     return render_template('index.html', data=data)
@@ -147,7 +147,7 @@ def get_latest_data():
         with open(get_log_file_name(), newline='') as csvfile:
             reader = csv.reader(csvfile)
             data = list(reader)
-    except FileNotFoundError:
+    except FileNotFoundError or TypeError:
         data = []
 
     # Skip the first row, which contains the headers
