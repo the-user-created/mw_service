@@ -185,7 +185,41 @@ def download_video():
         return send_from_directory(directory=directory, path=filename, as_attachment=True, mimetype='video/x-msvideo')
     return "Video file not found", 404
 
+def start_cleanup_thread(directory, interval_minutes=1):
+    """
+    Start a background thread that removes old files every `interval_minutes`.
+    """
+    def cleanup_task():
+        while True:
+            remove_old_files(directory)
+            time.sleep(interval_minutes * 60)
+
+    cleanup_thread = threading.Thread(target=cleanup_task)
+    cleanup_thread.daemon = True  # Daemonize thread to exit when the main program does
+    cleanup_thread.start()
+
+def remove_old_files(directory, max_age_minutes=10):
+    """
+    Remove files older than `max_age_minutes` from the specified directory.
+    """
+    current_time = time.time()
+    max_age_seconds = max_age_minutes * 60
+
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        if os.path.isfile(file_path) and (filename.endswith('.csv') or filename.endswith('.avi')):
+            file_creation_time = os.path.getctime(file_path)
+            if current_time - file_creation_time > max_age_seconds:
+                try:
+                    os.remove(file_path)
+                    print(f"Removed old file: {file_path}")
+                except Exception as e:
+                    print(f"Error while deleting file {file_path}: {e}")
+
 if __name__ == '__main__':
+    log_directory = os.path.dirname(os.path.abspath(__file__))  # Assuming logs are in the same directory as app.py
+    start_cleanup_thread(log_directory)
+
     logger = Logger()
 
     try:
