@@ -55,7 +55,6 @@ class Logger:
                 elif not self.logging_active:
                     has_setup_writer = False
                     self.video_writer = None
-                    print("Video writer has been reset.")
 
                 success, frame = self.cap.read()
                 if not success:
@@ -64,7 +63,6 @@ class Logger:
 
                 # Write frame to video if recording is active
                 if self.logging_active and self.video_writer is not None:
-                    print("Writing frame to video.")
                     self.video_writer.write(frame)
 
                 # Send frame as JPEG to the client
