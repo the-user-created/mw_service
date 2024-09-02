@@ -24,12 +24,9 @@ class Logger:
         self.frame_thread = threading.Thread(target=self.gen_frames)
         self.frame_thread.start()
 
-    def start_logging(self, power_setting, catalyst):
-        self.log_file_name = f"{power_setting}_{catalyst}_sensor_log.csv"
-        self.video_file_name = f"{power_setting}_{catalyst}_video.avi"
-        print(f"Log file name: {self.log_file_name}")
-        print(f"Video file name: {self.video_file_name}")
-        print(f"CWD: {os.getcwd()}")
+    def start_logging(self, power_setting, catalyst, microwave_duration):
+        self.log_file_name = f"{power_setting}_{catalyst}_{microwave_duration}_sensor_log.csv"
+        self.video_file_name = f"{power_setting}_{catalyst}_{microwave_duration}_video.avi"
 
         self.logging_active = True
         log_sensors.start_logging(self.log_file_name)
@@ -40,7 +37,7 @@ class Logger:
 
     def gen_frames(self):
         if not self.cap.isOpened():
-            print("Camera is already open.")
+            print("Failed to open camera.")
             return
 
         print("Camera opened successfully.")
@@ -101,11 +98,18 @@ def index():
 
     return render_template('index.html', data=data)
 
+
 @app.route('/start', methods=['POST'])
 def start_logging():
     power_setting = request.form['power']
     catalyst = request.form['catalyst']
-    logger.start_logging(power_setting, catalyst)
+    microwave_duration_minutes = request.form['microwave_duration_minutes']
+    microwave_duration_seconds = request.form['microwave_duration_seconds']
+
+    # Combine minutes and seconds into a single duration string
+    microwave_duration = f"{microwave_duration_minutes}m_{microwave_duration_seconds}s"
+
+    logger.start_logging(power_setting, catalyst, microwave_duration)
     return redirect(url_for('index'))
 
 @app.route('/stop', methods=['POST'])
