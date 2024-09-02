@@ -73,9 +73,8 @@ def stop_logging():
 
 
 def gen_frames():
-    global cap, recording_active, video_writer
-    print("Attempting to open the camera...")
-
+    global cap, recording_active, video_writer, video_file_name
+    print("video file name: ", video_file_name)
     if not cap.isOpened():
         print("Camera is already open.")
         return
@@ -83,6 +82,7 @@ def gen_frames():
     print("Camera opened successfully.")
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     video_writer = cv2.VideoWriter(video_file_name, fourcc, 20.0, (640, 480))
+    print(f"Video writer created: {video_writer}")
 
     try:
         while True:
@@ -91,6 +91,7 @@ def gen_frames():
                 print("Failed to capture frame.")
                 break
             if recording_active and video_writer is not None:
+                print("Writing frame to video.")
                 video_writer.write(frame)
             ret, buffer = cv2.imencode('.jpg', frame)
             frame = buffer.tobytes()
