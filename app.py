@@ -69,15 +69,15 @@ def stop_logging():
 
     # Ensure the camera is fully released
     # cap = cv2.VideoCapture(0)
-    if cap.isOpened():
-        cap.release()
-        print("Camera released after logging stopped.")
+    #if cap.isOpened():
+    #    cap.release()
+    #    print("Camera released after logging stopped.")
 
     return redirect(url_for('index'))
 
 
 def start_video_recording(filename):
-    global video_writer, recording_active
+    global video_writer, recording_active, cap
     recording_active = True
     # cap = cv2.VideoCapture(0)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -90,7 +90,7 @@ def start_video_recording(filename):
         else:
             break
 
-    cap.release()
+    # cap.release()
     video_writer.release()
 
 def stop_video_recording():
@@ -102,6 +102,7 @@ def stop_video_recording():
 
 # Video streaming function using GStreamer
 def gen_frames():
+    global cap
     print("Attempting to open the camera...")
     # cap = cv2.VideoCapture(0)
 
@@ -124,7 +125,7 @@ def gen_frames():
     except Exception as e:
         print(f"Error while reading camera stream: {e}")
     finally:
-        cap.release()
+        # cap.release()
         print("Camera released in gen_frames.")
 
 
@@ -184,4 +185,11 @@ def download_video():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    try:
+        app.run(host='0.0.0.0', port=5000)
+    except KeyboardInterrupt:
+        print("Keyboard interrupt detected.")
+        stop_logging()
+        if cap.isOpened():
+            cap.release()
+            print("Camera released.")
