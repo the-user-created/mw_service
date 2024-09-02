@@ -5,6 +5,7 @@ import os
 import cv2
 import threading
 
+# TODO: Add user input notes section to CSV columns (recorded data table)
 app = Flask(__name__)
 
 # Global variables to hold the threads
@@ -97,12 +98,19 @@ def stop_logging() -> Response:
 # Video streaming function using GStreamer
 def gen_frames() -> bytes:
     print("Attempting to open the camera...")
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        print("Failed to open camera. It might be in use or not available.")
+    try:
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            print("Failed to open camera. It might be in use or not available.")
+            yield (b'--frame\r\n'
+                   b'Content-Type: text/plain\r\n\r\n'
+                   b'Camera is not available.\r\n')
+            return
+    except Exception as e:
+        print(f"Error while opening camera: {e}")
         yield (b'--frame\r\n'
                b'Content-Type: text/plain\r\n\r\n'
-               b'Camera is not available.\r\n')
+               b'Error while opening camera.\r\n')
         return
 
     print("Camera opened successfully.")
