@@ -70,8 +70,10 @@ def start_logging() -> Response:
     set_logging_active(True)
 
     # Start logging in a separate thread
-    logging_thread = threading.Thread(target=log_sensors.start_logging, args=(get_log_file_name(),))
-    logging_thread.start()
+    #logging_thread = threading.Thread(target=log_sensors.start_logging, args=(get_log_file_name(),))
+    #logging_thread.start()
+    #log_sensors.start_logging(get_log_file_name())
+    log_sensors.run_logging(get_log_file_name())
 
     return redirect(url_for('index'))
 
@@ -83,8 +85,8 @@ def stop_logging() -> Response:
     log_sensors.stop_logging()
     set_logging_active(False)
 
-    if logging_thread:
-        logging_thread.join()  # Wait for the logging thread to finish
+    #if logging_thread:
+    #    logging_thread.join()  # Wait for the logging thread to finish
 
     # Ensure the camera is fully released
     cap = cv2.VideoCapture(0)

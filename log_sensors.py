@@ -132,9 +132,9 @@ def stop_logging() -> None:
     print("Logging stopped.")
 
 
-def run_logging() -> None:
+def run_logging(log_file) -> None:
     try:
-        start_logging("temperature_log.csv")
+        start_logging(log_file)
     except KeyboardInterrupt:
         stop_logging()
     finally:
