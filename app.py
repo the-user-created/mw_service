@@ -1,3 +1,5 @@
+import time
+
 from flask import Flask, render_template, redirect, url_for, request, Response, jsonify, send_from_directory, g
 import log_sensors
 import csv
@@ -77,12 +79,22 @@ def start_video_recording(filename):
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     video_writer = cv2.VideoWriter(filename, fourcc, 20.0, (640, 480))
 
+    frame_count = 0
+    start_time = time.time()
+
     while recording_active:
         ret, frame = cap.read()
         if ret:
             video_writer.write(frame)
+            frame_count += 1
         else:
             break
+
+        # Log frame count every second
+        if time.time() - start_time >= 1:
+            print(f"Frames captured in the last second: {frame_count}")
+            frame_count = 0
+            start_time = time.time()
 
     video_writer.release()
 
