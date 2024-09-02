@@ -99,7 +99,10 @@ def gen_frames() -> bytes:
     print("Attempting to open the camera...")
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        print("Failed to open camera.")
+        print("Failed to open camera. It might be in use or not available.")
+        yield (b'--frame\r\n'
+               b'Content-Type: text/plain\r\n\r\n'
+               b'Camera is not available.\r\n')
         return
 
     print("Camera opened successfully.")
