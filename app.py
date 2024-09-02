@@ -21,10 +21,6 @@ video_thread = None
 recording_active = False
 video_writer = None
 
-# Shared frame buffer
-frame_buffer = None
-frame_lock = threading.Lock()
-
 @app.route('/')
 def index():
     global log_file_name
@@ -78,7 +74,7 @@ def stop_logging():
 
 
 def start_video_recording(filename):
-    global video_writer, recording_active, frame_buffer, frame_lock
+    global video_writer, recording_active, cap
     recording_active = True
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     video_writer = cv2.VideoWriter(filename, fourcc, 20.0, (640, 480))
@@ -87,10 +83,12 @@ def start_video_recording(filename):
     start_time = time.time()
 
     while recording_active:
-        with frame_lock:
-            if frame_buffer is not None:
-                video_writer.write(frame_buffer)
-                frame_count += 1
+        ret, frame = cap.read()
+        if ret:
+            video_writer.write(frame)
+            frame_count += 1
+        else:
+            break
 
         # Log frame count every second
         if time.time() - start_time >= 1:
@@ -106,28 +104,31 @@ def stop_video_recording():
     if video_thread is not None:
         video_thread.join()  # Wait for the video recording thread to finis
 
-# Frame capturing function
-def capture_frames():
-    global cap, frame_buffer, frame_lock
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        with frame_lock:
-            frame_buffer = frame
 
 # Video streaming function using GStreamer
 def gen_frames():
-    global frame_lock, frame_buffer
+    global cap
     print("Attempting to open the camera...")
 
-    while True:
-        with frame_lock:
-            if frame_buffer is not None:
-                ret, buffer = cv2.imencode('.jpg', frame_buffer)
+    if not cap.isOpened():
+        print("Camera is open already.")
+        return
+
+    print("Camera opened successfully.")
+    try:
+        while True:
+            success, frame = cap.read()
+            if not success:
+                print("Failed to capture frame.")
+                break
+            else:
+                ret, buffer = cv2.imencode('.jpg', frame)
                 frame = buffer.tobytes()
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    except Exception as e:
+        print(f"Error while reading camera stream: {e}")
+
 
 @app.route('/video_feed')
 def video_feed():
@@ -187,10 +188,6 @@ def download_video():
 
 if __name__ == '__main__':
     try:
-        # Start the frame capturing thread
-        frame_capture_thread = threading.Thread(target=capture_frames)
-        frame_capture_thread.start()
-
         app.run(host='0.0.0.0', port=5000)
     except KeyboardInterrupt:
         print("Keyboard interrupt detected.")
