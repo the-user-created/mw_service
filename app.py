@@ -12,7 +12,7 @@ class Logger:
         self.log_file_name = None
         self.video_file_name = None
         self.logging_active = False
-        self.recording_active = False
+        self.providing_frames = True
         self.video_writer = None
         self.cap = cv2.VideoCapture(0)
         self.frame_thread = None
@@ -24,7 +24,6 @@ class Logger:
         print(f"Video file name: {self.video_file_name}")
         print(f"CWD: {os.getcwd()}")
 
-        self.recording_active = True
         self.logging_active = True
         log_sensors.start_logging(self.log_file_name)
 
@@ -35,7 +34,6 @@ class Logger:
     def stop_logging(self):
         log_sensors.stop_logging()
         self.logging_active = False
-        self.recording_active = False
 
         # Ensure the frame thread is properly stopped
         if self.frame_thread is not None:
@@ -47,20 +45,29 @@ class Logger:
             return
 
         print("Camera opened successfully.")
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        print(f"Creating video writer with file name: {self.video_file_name}")
-        self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 20.0, (640, 480))
-        print(f"Video writer created: {self.video_writer}")
+
+        has_setup_writer = False
 
         try:
-            while self.recording_active:
+            while self.providing_frames:
+                # Set up video writer if it hasn't been done yet
+                if not has_setup_writer and self.logging_active:
+                    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                    self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 20.0, (640, 480))
+                    has_setup_writer = True
+                    print(f"Video writer set up with file name: {self.video_file_name}")
+
                 success, frame = self.cap.read()
                 if not success:
                     print("Failed to capture frame.")
                     break
-                if self.recording_active and self.video_writer is not None:
+
+                # Write frame to video if recording is active
+                if self.logging_active and self.video_writer is not None:
                     print("Writing frame to video.")
                     self.video_writer.write(frame)
+
+                # Send frame as JPEG to the client
                 ret, buffer = cv2.imencode('.jpg', frame)
                 frame = buffer.tobytes()
                 yield (b'--frame\r\n'
@@ -70,8 +77,6 @@ class Logger:
         finally:
             if self.video_writer is not None:
                 self.video_writer.release()
-
-logger = Logger()
 
 @app.route('/')
 def index():
@@ -139,11 +144,14 @@ def download_video():
     return "Video file not found", 404
 
 if __name__ == '__main__':
+    logger = Logger()
+
     try:
         app.run(host='0.0.0.0', port=5000)
     except KeyboardInterrupt:
         print("Keyboard interrupt detected.")
         logger.stop_logging()
+        logger.providing_frames = False
         if logger.cap.isOpened():
             logger.cap.release()
             print("Camera released.")
