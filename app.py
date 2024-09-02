@@ -11,22 +11,27 @@ app = Flask(__name__)
 def get_log_file_name() -> str | None:
     if 'log_file_name' not in g:
         g.log_file_name = None
+    print(f"Log file name: {g.log_file_name}")
     return g.log_file_name
 
 def set_log_file_name(value) -> None:
+    print(f"Setting log file name to: {value}")
     g.log_file_name = value
 
 def get_video_file_name() -> str | None:
     if 'video_file_name' not in g:
         g.video_file_name = None
+    print(f"Video file name: {g.video_file_name}")
     return g.video_file_name
 
 def set_video_file_name(value) -> None:
+    print(f"Setting video file name to: {value}")
     g.video_file_name = value
 
 def is_logging_active() -> bool:
     if 'logging_active' not in g:
         g.logging_active = False
+    print(f"Logging active: {g.logging_active}")
     return g.logging_active
 
 def set_logging_active(value) -> None:
@@ -59,7 +64,7 @@ def start_logging():
     catalyst = request.form['catalyst']
 
     # Create unique log file and video file names
-    set_log_file_name(f"{power_setting}_{catalyst}_log.csv")
+    set_log_file_name(f"{power_setting}_{catalyst}_sensor_log.csv")
     set_video_file_name(f"{power_setting}_{catalyst}_video.avi")
     print(f"Log file name: {get_log_file_name()}")
     print(f"Video file name: {get_video_file_name()}")
