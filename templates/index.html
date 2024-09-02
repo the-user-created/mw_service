@@ -97,40 +97,53 @@
             headersInserted = true;
         }
 
+        function updateOrCreateRow(rowData) {
+            const timestamp = rowData[0];
+            let existingRow = document.getElementById(`row-${timestamp}`);
+
+            if (!existingRow) {
+                existingRow = document.createElement("tr");
+                existingRow.id = `row-${timestamp}`;
+
+                rowData.forEach((cellData, index) => {
+                    let td = document.createElement("td");
+                    td.innerText = cellData;
+                    existingRow.appendChild(td);
+                });
+
+                // Add comment input field
+                let commentTd = document.createElement("td");
+                let commentInput = document.createElement("input");
+                commentInput.type = "text";
+                commentInput.name = "comment";
+                commentInput.value = comments[timestamp] || "";  // Load existing comment or leave blank
+
+                commentInput.addEventListener("input", function () {
+                    comments[timestamp] = commentInput.value;  // Save comment in the comments object
+                });
+
+                commentTd.appendChild(commentInput);
+                existingRow.appendChild(commentTd);
+
+                document.getElementById("data-table-body").appendChild(existingRow);
+            } else {
+                // Update existing cells
+                rowData.forEach((cellData, index) => {
+                    existingRow.cells[index].innerText = cellData;
+                });
+            }
+        }
+
         function fetchData() {
             fetch('/get_latest_data')
                 .then(response => response.json())
                 .then(data => {
-                    let tableBody = document.getElementById("data-table-body");
-                    tableBody.innerHTML = "";  // Clear existing rows
-
                     if (!headersInserted && data.length > 0) {
                         insertHeaders();
                     }
 
                     data.forEach(row => {
-                        let tr = document.createElement("tr");
-                        row.forEach((cell, index) => {
-                            let td = document.createElement("td");
-                            td.innerText = cell;
-                            tr.appendChild(td);
-                        });
-
-                        // Add comment input field
-                        let commentTd = document.createElement("td");
-                        let commentInput = document.createElement("input");
-                        commentInput.type = "text";
-                        commentInput.name = "comment";
-                        commentInput.value = comments[row[0]] || "";  // Load existing comment or leave blank
-
-                        commentInput.addEventListener("input", function() {
-                            comments[row[0]] = commentInput.value;  // Save comment in the comments object
-                        });
-
-                        commentTd.appendChild(commentInput);
-                        tr.appendChild(commentTd);
-
-                        tableBody.appendChild(tr);
+                        updateOrCreateRow(row);
                     });
                 });
         }
