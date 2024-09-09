@@ -25,6 +25,10 @@ class Logger:
         self.frame_thread = threading.Thread(target=self.gen_frames)
         self.frame_thread.start()
 
+    def get_frame_rate(self):
+        # Get the frame rate from the video capture device
+        return self.cap.get(cv2.CAP_PROP_FPS)
+
     def start_logging(self, power_setting, catalyst, microwave_duration):
         self.log_file_name = f"{power_setting}_{catalyst}_{microwave_duration}_sensor_log.csv"
         self.video_file_name = f"{power_setting}_{catalyst}_{microwave_duration}_video.avi"
@@ -62,13 +66,15 @@ class Logger:
         print("Camera opened successfully.")
         has_setup_writer = False
         try:
+            frame_count = 0
+            start_time = 0
             while self.providing_frames:
                 # Set up video writer if it hasn't been done yet
                 if not has_setup_writer and self.logging_active:
                     start_time = time.time()
-                    frame_count = 0
                     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-                    self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, 10.2024, (640, 480))
+                    frame_rate = self.get_frame_rate()
+                    self.video_writer = cv2.VideoWriter(self.video_file_name, fourcc, frame_rate, (640, 480))
                     has_setup_writer = True
                     print(f"Video writer set up with file name: {self.video_file_name}")
                 elif not self.logging_active and has_setup_writer:
